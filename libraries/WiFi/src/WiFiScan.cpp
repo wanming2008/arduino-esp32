@@ -192,7 +192,7 @@ String WiFiScanClass::SSID(uint8_t i)
 {
     wifi_ap_list_t* it = reinterpret_cast<wifi_ap_list_t*>(_getScanInfoByIndex(i));
     if(!it) {
-        return 0;
+        return "";
     }
     return String(reinterpret_cast<const char*>(it->ssid));
 }
