@@ -38,6 +38,8 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <math.h>
+#include "stdlib_noniso.h"
 
 typedef bool boolean;
 typedef uint8_t byte;
@@ -46,6 +48,13 @@ typedef uint8_t byte;
 
 #ifdef __cplusplus
 }
+#endif
+
+
+#ifndef _GLIBCXX_VECTOR
+// arduino is not compatible with std::vector
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
 #endif
 
 #include "WCharacter.h"
