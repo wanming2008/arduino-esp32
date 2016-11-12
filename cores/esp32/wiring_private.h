@@ -27,11 +27,15 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
+#include "esp32-hal.h"
 
-#include "arducore.h"
+//#include "arducore.h"
+#include "Arduino.h"
 
 #ifdef __cplusplus
 extern "C" {
+
 #endif
 
 typedef void (*voidFuncPtr)(void);

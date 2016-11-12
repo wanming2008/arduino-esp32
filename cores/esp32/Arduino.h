@@ -121,6 +121,10 @@ typedef bool boolean;
 typedef uint8_t byte;
 typedef unsigned int word;
 
+// Shifty prototypes
+void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
+uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
+
 #ifdef __cplusplus
 }
 
@@ -155,8 +159,8 @@ typedef unsigned int word;
 #define _max(a,b) ((a)>(b)?(a):(b))
 
 // WMath prototypes
-long random(long);
 long random(long, long);
+//long random(long);
 void randomSeed(unsigned long);
 long map(long, long, long, long, long);
 
