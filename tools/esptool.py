@@ -274,17 +274,15 @@ class ESPLoader(object):
             self._port.setDTR(False)
             self._port.setRTS(True)
             time.sleep(0.05)
-            self._port.setRTS(False)
             self._port.setDTR(True)
+            self._port.setRTS(False)
             time.sleep(0.5)  # needed a longer delay
-            #self._port.setDTR(False)
+            self._port.setDTR(False)
 
             self._port.timeout = 0.1
             last_exception = None
             for _ in xrange(4):
                 try:
-		    #line = self._port.read(1000)
-		    #print(line)
                     self.flush_input()
                     self._port.flushOutput()
                     self.sync()
