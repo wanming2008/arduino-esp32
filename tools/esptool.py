@@ -274,15 +274,17 @@ class ESPLoader(object):
             self._port.setDTR(False)
             self._port.setRTS(True)
             time.sleep(0.05)
-            self._port.setDTR(True)
             self._port.setRTS(False)
-            time.sleep(0.05)
-            self._port.setDTR(False)
+            self._port.setDTR(True)
+            time.sleep(0.5)  # needed a longer delay
+            #self._port.setDTR(False)
 
             self._port.timeout = 0.1
             last_exception = None
             for _ in xrange(4):
                 try:
+		    #line = self._port.read(1000)
+		    #print(line)
                     self.flush_input()
                     self._port.flushOutput()
                     self.sync()
@@ -293,6 +295,14 @@ class ESPLoader(object):
                     time.sleep(0.05)
         raise FatalError('Failed to connect to %s: %s' % (self.CHIP_NAME, last_exception))
 
+    def reset(self):
+        """ Try to reset the board post programming """
+        print 'Resetting...'
+
+        self._port.setRTS(True)
+        self._port.setDTR(False)
+        self._port.setDTR(True)
+        
     """ Read memory address in target """
     def read_reg(self, addr):
         # we don't call check_command here because read_reg() function is called
@@ -1503,7 +1513,7 @@ def write_flash(esp, args):
     if args.verify:
         print 'Verifying just-written flash...'
         verify_flash(esp, args, header_block)
-
+    esp.reset()
 
 def image_info(args):
     image = LoadFirmwareImage(args.chip, args.filename)
