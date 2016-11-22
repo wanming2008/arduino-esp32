@@ -30,7 +30,6 @@
 #include <inttypes.h>
 #include "esp32-hal.h"
 
-//#include "arducore.h"
 #include "Arduino.h"
 
 #ifdef __cplusplus

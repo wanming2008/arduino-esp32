@@ -121,9 +121,8 @@ typedef bool boolean;
 typedef uint8_t byte;
 typedef unsigned int word;
 
-// Shifty prototypes
-void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
 uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
+void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
 
 #ifdef __cplusplus
 }
@@ -147,7 +146,13 @@ uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
 #include "HardwareSerial.h"
 #include "Esp.h"
 
+// WMath prototypes
+long random(long);
 #endif /* __cplusplus */
+
+long random(long, long);
+void randomSeed(unsigned long);
+long map(long, long, long, long, long);
 
 #ifndef _GLIBCXX_VECTOR
 // arduino is not compatible with std::vector
@@ -157,12 +162,6 @@ uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
 
 #define _min(a,b) ((a)<(b)?(a):(b))
 #define _max(a,b) ((a)>(b)?(a):(b))
-
-// WMath prototypes
-long random(long, long);
-//long random(long);
-void randomSeed(unsigned long);
-long map(long, long, long, long, long);
 
 #include "pins_arduino.h"
 

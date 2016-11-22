@@ -28,9 +28,24 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
 #include <math.h>
+#include "sdkconfig.h"
+
+#ifndef CONFIG_DISABLE_HAL_LOCKS
+#define CONFIG_DISABLE_HAL_LOCKS 0
+#endif
+
+#ifndef CONFIG_AUTOSTART_ARDUINO
+#define CONFIG_AUTOSTART_ARDUINO 1
+#endif
+
+//forward declaration from freertos/portmacro.h
+void vPortYield( void );
+#define yield() vPortYield()
+#define optimistic_yield(u)
 
 #define ESP_REG(addr) *((volatile uint32_t *)(addr))
 #define NOP() asm volatile ("nop")
@@ -49,6 +64,10 @@ uint32_t micros();
 uint32_t millis();
 void delay(uint32_t);
 void delayMicroseconds(uint32_t us);
+
+#if !CONFIG_AUTOSTART_ARDUINO
+void initArduino();
+#endif
 
 #ifdef __cplusplus
 }

@@ -40,11 +40,23 @@ static int s_uart_debug_nr = 0;
 
 struct uart_struct_t {
     uart_dev_t * dev;
+#if !CONFIG_DISABLE_HAL_LOCKS
     xSemaphoreHandle lock;
+#endif
     uint8_t num;
     xQueueHandle queue;
 };
 
+#if CONFIG_DISABLE_HAL_LOCKS
+#define UART_MUTEX_LOCK()
+#define UART_MUTEX_UNLOCK()
+
+static uart_t _uart_bus_array[3] = {
+    {(volatile uart_dev_t *)(DR_REG_UART_BASE), 0, NULL},
+    {(volatile uart_dev_t *)(DR_REG_UART1_BASE), 1, NULL},
+    {(volatile uart_dev_t *)(DR_REG_UART2_BASE), 2, NULL}
+};
+#else
 #define UART_MUTEX_LOCK()    do {} while (xSemaphoreTake(uart->lock, portMAX_DELAY) != pdPASS)
 #define UART_MUTEX_UNLOCK()  xSemaphoreGive(uart->lock)
 
@@ -53,6 +65,7 @@ static uart_t _uart_bus_array[3] = {
     {(volatile uart_dev_t *)(DR_REG_UART1_BASE), NULL, 1, NULL},
     {(volatile uart_dev_t *)(DR_REG_UART2_BASE), NULL, 2, NULL}
 };
+#endif
 
 static void IRAM_ATTR _uart_isr(void *arg)
 {
@@ -163,12 +176,14 @@ uart_t* uartBegin(uint8_t uart_nr, uint32_t baudrate, uint32_t config, int8_t rx
 
     uart_t* uart = &_uart_bus_array[uart_nr];
 
+#if !CONFIG_DISABLE_HAL_LOCKS
     if(uart->lock == NULL) {
         uart->lock = xSemaphoreCreateMutex();
         if(uart->lock == NULL) {
             return NULL;
         }
     }
+#endif
 
     if(queueLen && uart->queue == NULL) {
         uart->queue = xQueueCreate(queueLen, sizeof(uint8_t)); //initialize the queue
@@ -358,5 +373,42 @@ int uartGetDebug()
     return s_uart_debug_nr;
 }
 
-
+int log_printf(const char *format, ...)
+{
+    if(s_uart_debug_nr < 0){
+        return 0;
+    }
+    char loc_buf[64];
+    char * temp = loc_buf;
+    int len;
+    va_list arg;
+    va_list copy;
+    va_start(arg, format);
+    va_copy(copy, arg);
+    len = vsnprintf(NULL, 0, format, arg);
+    va_end(copy);
+    if(len >= sizeof(loc_buf)){
+        temp = (char*)malloc(len+1);
+        if(temp == NULL) {
+            return 0;
+        }
+    }
+    vsnprintf(temp, len+1, format, arg);
+#if !CONFIG_DISABLE_HAL_LOCKS
+    if(_uart_bus_array[s_uart_debug_nr].lock){
+        while (xSemaphoreTake(_uart_bus_array[s_uart_debug_nr].lock, portMAX_DELAY) != pdPASS);
+        ets_printf("%s", temp);
+        xSemaphoreGive(_uart_bus_array[s_uart_debug_nr].lock);
+    } else {
+        ets_printf("%s", temp);
+    }
+#else
+    ets_printf("%s", temp);
+#endif
+    va_end(arg);
+    if(len > 64){
+        free(temp);
+    }
+    return len;
+}
 
