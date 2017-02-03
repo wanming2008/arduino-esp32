@@ -40,10 +40,8 @@ extern "C" {
 #include <lwip/ip_addr.h>
 #include "lwip/err.h"
 #include "lwip/dns.h"
+#include <esp_smartconfig.h>
 }
-
-extern "C" void esp_schedule();
-extern "C" void esp_yield();
 
 // -----------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------- Private functions ------------------------------------------------
@@ -137,18 +135,18 @@ wl_status_t WiFiSTAClass::begin(const char* ssid, const char *passphrase, int32_
         esp_wifi_set_config(WIFI_IF_STA, &conf);
     }
 
-
-
     if(channel > 0 && channel <= 13) {
         esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     }
 
-    if(!_useStaticIp) {
-        tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
-    }
-
     if(connect) {
         esp_wifi_connect();
+    }
+
+    if(!_useStaticIp) {
+        tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
+    } else {
+        tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA);
     }
 
     return status();
@@ -175,7 +173,10 @@ wl_status_t WiFiSTAClass::begin()
 
     if(!_useStaticIp) {
         tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
+    } else {
+        tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA);
     }
+
     return status();
 }
 
@@ -206,7 +207,7 @@ bool WiFiSTAClass::config(IPAddress local_ip, IPAddress gateway, IPAddress subne
     info.netmask.addr = static_cast<uint32_t>(subnet);
 
     tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA);
-    if(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &info)) {
+    if(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &info) == ESP_OK) {
         _useStaticIp = true;
     } else {
         return false;
@@ -403,9 +404,11 @@ wl_status_t WiFiSTAClass::status()
  */
 String WiFiSTAClass::SSID() const
 {
-    wifi_config_t conf;
-    esp_wifi_get_config(WIFI_IF_STA, &conf);
-    return String(reinterpret_cast<char*>(conf.sta.ssid));
+    wifi_ap_record_t info;
+    if(!esp_wifi_sta_get_ap_info(&info)) {
+        return String(reinterpret_cast<char*>(info.ssid));
+    }
+    return String();
 }
 
 /**
@@ -426,10 +429,12 @@ String WiFiSTAClass::psk() const
 uint8_t* WiFiSTAClass::BSSID(void)
 {
     static uint8_t bssid[6];
-    wifi_config_t conf;
-    esp_wifi_get_config(WIFI_IF_STA, &conf);
-    memcpy(bssid, conf.sta.bssid, 6);
-    return reinterpret_cast<uint8_t*>(bssid);
+    wifi_ap_record_t info;
+    if(!esp_wifi_sta_get_ap_info(&info)) {
+        memcpy(bssid, info.bssid, 6);
+        return reinterpret_cast<uint8_t*>(bssid);
+    }
+    return NULL;
 }
 
 /**
@@ -438,10 +443,12 @@ uint8_t* WiFiSTAClass::BSSID(void)
  */
 String WiFiSTAClass::BSSIDstr(void)
 {
+    uint8_t* bssid = BSSID();
+    if(!bssid){
+        return String();
+    }
     char mac[18] = { 0 };
-    wifi_config_t conf;
-    esp_wifi_get_config(WIFI_IF_STA, &conf);
-    sprintf(mac, "%02X:%02X:%02X:%02X:%02X:%02X", conf.sta.bssid[0], conf.sta.bssid[1], conf.sta.bssid[2], conf.sta.bssid[3], conf.sta.bssid[4], conf.sta.bssid[5]);
+    sprintf(mac, "%02X:%02X:%02X:%02X:%02X:%02X", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     return String(mac);
 }
 
@@ -449,7 +456,117 @@ String WiFiSTAClass::BSSIDstr(void)
  * Return the current network RSSI.
  * @return  RSSI value
  */
-int32_t WiFiSTAClass::RSSI(void)
+int8_t WiFiSTAClass::RSSI(void)
 {
-    return 0;//wifi_station_get_rssi();
+    wifi_ap_record_t info;
+    if(!esp_wifi_sta_get_ap_info(&info)) {
+        return info.rssi;
+    }
+    return 0;
+}
+
+/**
+ * Get the station interface Host name.
+ * @return char array hostname
+ */
+const char * WiFiSTAClass::getHostname()
+{
+    const char * hostname;
+    if(tcpip_adapter_get_hostname(TCPIP_ADAPTER_IF_STA, &hostname)){
+        return NULL;
+    }
+    return hostname;
+}
+
+/**
+ * Set the station interface Host name.
+ * @param  hostname  pointer to const string
+ * @return true on   success
+ */
+bool WiFiSTAClass::setHostname(const char * hostname)
+{
+    return tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, hostname) == 0;
+}
+
+/**
+ * Enable IPv6 on the station interface.
+ * @return true on success
+ */
+bool WiFiSTAClass::enableIpV6()
+{
+    return tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA) == 0;
+}
+
+/**
+ * Get the station interface IPv6 address.
+ * @return IPv6Address
+ */
+IPv6Address WiFiSTAClass::localIPv6()
+{
+    static ip6_addr_t addr;
+    if(tcpip_adapter_get_ip6_linklocal(TCPIP_ADAPTER_IF_STA, &addr)){
+        return IPv6Address();
+    }
+    return IPv6Address(addr.addr);
+}
+
+
+bool WiFiSTAClass::_smartConfigStarted = false;
+bool WiFiSTAClass::_smartConfigDone = false;
+
+
+bool WiFiSTAClass::beginSmartConfig() {
+    if (_smartConfigStarted) {
+        return false;
+    }
+
+    if (!WiFi.mode(WIFI_STA)) {
+        return false;
+    }
+
+
+    esp_err_t err;
+    err = esp_smartconfig_start(reinterpret_cast<sc_callback_t>(&WiFiSTAClass::_smartConfigCallback), 1);
+    if (err == ESP_OK) {
+        _smartConfigStarted = true;
+        _smartConfigDone = false;
+        return true;
+    }
+    return false;
+}
+
+bool WiFiSTAClass::stopSmartConfig() {
+    if (!_smartConfigStarted) {
+        return true;
+    }
+
+    if (esp_smartconfig_stop() == ESP_OK) {
+        _smartConfigStarted = false;
+        return true;
+    }
+
+    return false;
+}
+
+bool WiFiSTAClass::smartConfigDone() {
+    if (!_smartConfigStarted) {
+        return false;
+    }
+
+    return _smartConfigDone;
+}
+
+void WiFiSTAClass::_smartConfigCallback(uint32_t st, void* result) {
+    smartconfig_status_t status = (smartconfig_status_t) st;
+    if (status == SC_STATUS_LINK) {
+        wifi_sta_config_t *sta_conf = reinterpret_cast<wifi_sta_config_t *>(result);
+
+        esp_wifi_set_config(WIFI_IF_AP, (wifi_config_t *)sta_conf);
+        esp_wifi_disconnect();
+        esp_wifi_connect();
+
+        _smartConfigDone = true;
+    } else if (status == SC_STATUS_LINK_OVER) {
+        WiFi.stopSmartConfig();
+    }
 }

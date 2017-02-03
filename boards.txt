@@ -17,7 +17,7 @@ esp32.build.core=esp32
 esp32.build.variant=esp32
 esp32.build.board=ESP32_DEV
 
-esp32.build.f_cpu=160000000L
+esp32.build.f_cpu=240000000L
 esp32.build.flash_mode=dio
 esp32.build.flash_size=4MB
 
@@ -57,7 +57,7 @@ esp320.build.core=esp32
 esp320.build.variant=esp320
 esp320.build.board=ESP320
 
-esp320.build.f_cpu=160000000L
+esp320.build.f_cpu=240000000L
 esp320.build.flash_mode=qio
 esp320.build.flash_size=4MB
 
@@ -97,7 +97,7 @@ nano32.build.core=esp32
 nano32.build.variant=nano32
 nano32.build.board=NANO32
 
-nano32.build.f_cpu=160000000L
+nano32.build.f_cpu=240000000L
 nano32.build.flash_mode=dio
 nano32.build.flash_size=4MB
 
@@ -137,7 +137,7 @@ lolin32.build.core=esp32
 lolin32.build.variant=lolin32
 lolin32.build.board=LoLin32
 
-lolin32.build.f_cpu=160000000L
+lolin32.build.f_cpu=240000000L
 lolin32.build.flash_mode=dio
 lolin32.build.flash_size=4MB
 
@@ -177,7 +177,7 @@ espea32.build.core=esp32
 espea32.build.variant=espea32
 espea32.build.board=ESPea32
 
-espea32.build.f_cpu=160000000L
+espea32.build.f_cpu=240000000L
 espea32.build.flash_mode=dio
 espea32.build.flash_size=4MB
 
@@ -257,7 +257,7 @@ quantum.build.core=esp32
 quantum.build.variant=quantum
 quantum.build.board=QUANTUM
 
-quantum.build.f_cpu=160000000L
+quantum.build.f_cpu=240000000L
 quantum.build.flash_mode=qio
 quantum.build.flash_size=16MB
 
@@ -297,7 +297,7 @@ node32s.build.core=esp32
 node32s.build.variant=node32s
 node32s.build.board=Node32s
 
-node32s.build.f_cpu=160000000L
+node32s.build.f_cpu=240000000L
 node32s.build.flash_mode=dio
 node32s.build.flash_size=4MB
 
@@ -320,3 +320,79 @@ node32s.menu.UploadSpeed.460800.macosx=460800
 node32s.menu.UploadSpeed.460800.upload.speed=460800
 node32s.menu.UploadSpeed.512000.windows=512000
 node32s.menu.UploadSpeed.512000.upload.speed=512000
+##############################################################
+hornbill32dev.name=Hornbill ESP32 Dev
+
+hornbill32dev.upload.tool=esptool
+hornbill32dev.upload.maximum_size=1044464
+hornbill32dev.upload.maximum_data_size=294912
+hornbill32dev.upload.wait_for_upload_port=true
+
+hornbill32dev.serial.disableDTR=true
+hornbill32dev.serial.disableRTS=true
+
+hornbill32dev.build.mcu=esp32
+hornbill32dev.build.core=esp32
+hornbill32dev.build.variant=hornbill32dev
+hornbill32dev.build.board=HORNBILL_ESP32_DEV
+hornbill32dev.build.f_cpu=240000000L
+hornbill32dev.build.flash_mode=dio
+hornbill32dev.build.flash_size=4MB
+
+hornbill32dev.menu.FlashFreq.80=80MHz
+hornbill32dev.menu.FlashFreq.80.build.flash_freq=80m
+hornbill32dev.menu.FlashFreq.40=40MHz
+hornbill32dev.menu.FlashFreq.40.build.flash_freq=40m
+
+hornbill32dev.menu.UploadSpeed.921600=921600
+hornbill32dev.menu.UploadSpeed.921600.upload.speed=921600
+hornbill32dev.menu.UploadSpeed.115200=115200
+hornbill32dev.menu.UploadSpeed.115200.upload.speed=115200
+hornbill32dev.menu.UploadSpeed.256000.windows=256000
+hornbill32dev.menu.UploadSpeed.256000.upload.speed=256000
+hornbill32dev.menu.UploadSpeed.230400.windows.upload.speed=256000
+hornbill32dev.menu.UploadSpeed.230400=230400
+hornbill32dev.menu.UploadSpeed.230400.upload.speed=230400
+hornbill32dev.menu.UploadSpeed.460800.linux=460800
+hornbill32dev.menu.UploadSpeed.460800.macosx=460800
+hornbill32dev.menu.UploadSpeed.460800.upload.speed=460800
+hornbill32dev.menu.UploadSpeed.512000.windows=512000
+hornbill32dev.menu.UploadSpeed.512000.upload.speed=512000
+##############################################################
+hornbill32minima.name=Hornbill ESP32 Minima
+
+hornbill32minima.upload.tool=esptool
+hornbill32minima.upload.maximum_size=1044464
+hornbill32minima.upload.maximum_data_size=294912
+hornbill32minima.upload.wait_for_upload_port=true
+
+hornbill32minima.serial.disableDTR=true
+hornbill32minima.serial.disableRTS=true
+
+hornbill32minima.build.mcu=esp32
+hornbill32minima.build.core=esp32
+hornbill32minima.build.variant=hornbill32minima
+hornbill32minima.build.board=HORNBILL_ESP32_MINIMA
+hornbill32minima.build.f_cpu=240000000L
+hornbill32minima.build.flash_mode=dio
+hornbill32minima.build.flash_size=4MB
+
+hornbill32minima.menu.FlashFreq.80=80MHz
+hornbill32minima.menu.FlashFreq.80.build.flash_freq=80m
+hornbill32minima.menu.FlashFreq.40=40MHz
+hornbill32minima.menu.FlashFreq.40.build.flash_freq=40m
+
+hornbill32minima.menu.UploadSpeed.921600=921600
+hornbill32minima.menu.UploadSpeed.921600.upload.speed=921600
+hornbill32minima.menu.UploadSpeed.115200=115200
+hornbill32minima.menu.UploadSpeed.115200.upload.speed=115200
+hornbill32minima.menu.UploadSpeed.256000.windows=256000
+hornbill32minima.menu.UploadSpeed.256000.upload.speed=256000
+hornbill32minima.menu.UploadSpeed.230400.windows.upload.speed=256000
+hornbill32minima.menu.UploadSpeed.230400=230400
+hornbill32minima.menu.UploadSpeed.230400.upload.speed=230400
+hornbill32minima.menu.UploadSpeed.460800.linux=460800
+hornbill32minima.menu.UploadSpeed.460800.macosx=460800
+hornbill32minima.menu.UploadSpeed.460800.upload.speed=460800
+hornbill32minima.menu.UploadSpeed.512000.windows=512000
+hornbill32minima.menu.UploadSpeed.512000.upload.speed=512000

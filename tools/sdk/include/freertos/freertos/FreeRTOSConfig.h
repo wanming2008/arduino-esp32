@@ -90,10 +90,6 @@
 #define XT_TIMER_INDEX 0
 #elif CONFIG_FREERTOS_CORETIMER_1
 #define XT_TIMER_INDEX 1
-#elif CONFIG_FREERTOS_CORETIMER_2
-#define XT_TIMER_INDEX 2
-#elif CONFIG_FREERTOS_CORETIMER_3
-#define XT_TIMER_INDEX 3
 #endif
 
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS
@@ -108,6 +104,7 @@
 
 /* configASSERT behaviour */
 #ifndef __ASSEMBLER__
+#include <stdlib.h> /* for abort() */
 #include "rom/ets_sys.h"
 
 #if defined(CONFIG_FREERTOS_ASSERT_DISABLE)
@@ -126,8 +123,6 @@
 #endif
 
 #if CONFIG_FREERTOS_ASSERT_ON_UNTESTED_FUNCTION
-#include <stdlib.h>
-#include "rom/ets_sys.h"
 #define UNTESTED_FUNCTION() { ets_printf("Untested FreeRTOS function %s\r\n", __FUNCTION__); configASSERT(false); } while(0)
 #else
 #define UNTESTED_FUNCTION()
@@ -269,7 +264,9 @@
 #define configXT_BOARD                      1   /* Board mode */
 #define configXT_SIMULATOR					0
 
-
+#if CONFIG_ESP32_ENABLE_COREDUMP
+#define configENABLE_TASK_SNAPSHOT			1
+#endif
 
 
 #endif /* FREERTOS_CONFIG_H */

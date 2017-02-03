@@ -40,13 +40,77 @@ extern "C" {
 #include "lwip/opt.h"
 #include "lwip/err.h"
 #include "lwip/dns.h"
+#include "esp_ipc.h"
 
 #include "esp32-hal-log.h"
+
+/**
+ * Boot and start WiFi
+ * This method get's called on boot if you use any of the WiFi methods.
+ * If you do not link to this library, WiFi will not be started.
+ * */
+static bool _esp_wifi_initalized = false;
+extern void initWiFi()
+{
+#if !CONFIG_ESP32_PHY_AUTO_INIT
+    arduino_phy_init();
+#endif
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    tcpip_adapter_init();
+    esp_event_loop_init(&WiFiGenericClass::_eventCallback, NULL);
+    esp_wifi_init(&cfg);
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    _esp_wifi_initalized = true;
 }
+
+} //extern "C"
 
 #undef min
 #undef max
 #include <vector>
+
+static bool _esp_wifi_start()
+{
+    static bool started = false;
+    esp_err_t err;
+
+    if(!_esp_wifi_initalized){
+        initWiFi();
+        if(!_esp_wifi_initalized){
+            log_w("not initialized");
+            return false;
+        }
+    }
+    if(started){
+        return true;
+    }
+    started = true;
+    err = esp_wifi_start();
+    if (err != ESP_OK) {
+        log_e("%d", err);
+        return false;
+    }
+#if CONFIG_AUTOCONNECT_WIFI
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    bool auto_connect = false;
+
+    err = esp_wifi_get_mode(&mode);
+    if (err != ESP_OK) {
+        log_e("esp_wifi_get_mode: %d", err);
+        return false;
+    }
+
+    err = esp_wifi_get_auto_connect(&auto_connect);
+    if ((mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) && auto_connect) {
+        err = esp_wifi_connect();
+        if (err != ESP_OK) {
+            log_e("esp_wifi_connect: %d", err);
+            return false;
+        }
+    }
+#endif
+    return true;
+}
 
 // -----------------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------- Generic WiFi function -----------------------------------------------
@@ -167,7 +231,11 @@ void WiFiGenericClass::persistent(bool persistent)
  */
 bool WiFiGenericClass::mode(wifi_mode_t m)
 {
-    if(getMode() == m) {
+    wifi_mode_t cm = getMode();
+    if(cm == WIFI_MODE_MAX){
+        return false;
+    }
+    if(cm == m) {
         return true;
     }
     return esp_wifi_set_mode(m) == ESP_OK;
@@ -180,6 +248,9 @@ bool WiFiGenericClass::mode(wifi_mode_t m)
 wifi_mode_t WiFiGenericClass::getMode()
 {
     uint8_t mode;
+    if(!_esp_wifi_start()){
+        return WIFI_MODE_MAX;
+    }
     esp_wifi_get_mode((wifi_mode_t*)&mode);
     return (wifi_mode_t)mode;
 }
@@ -233,33 +304,7 @@ bool WiFiGenericClass::enableAP(bool enable)
 // ------------------------------------------------ Generic Network function ---------------------------------------------
 // -----------------------------------------------------------------------------------------------------------------------
 
-void wifi_dns_found_callback(const char *name, const ip_addr_t *ipaddr, void *callback_arg);
-
-/**
- * Resolve the given hostname to an IP address.
- * @param aHostname     Name to be resolved
- * @param aResult       IPAddress structure to store the returned IP address
- * @return 1 if aIPAddrString was successfully converted to an IP address,
- *          else error code
- */
 static bool _dns_busy = false;
-
-int WiFiGenericClass::hostByName(const char* aHostname, IPAddress& aResult)
-{
-    ip_addr_t addr;
-    aResult = static_cast<uint32_t>(0);
-    err_t err = dns_gethostbyname(aHostname, &addr, &wifi_dns_found_callback, &aResult);
-    _dns_busy = err == ERR_INPROGRESS;
-    while(_dns_busy);
-    if(err == ERR_INPROGRESS && aResult) {
-        //found by search
-    } else if(err == ERR_OK && addr.u_addr.ip4.addr) {
-        aResult = addr.u_addr.ip4.addr;
-    } else {
-        return 0;
-    }
-    return 1;
-}
 
 /**
  * DNS callback
@@ -267,7 +312,7 @@ int WiFiGenericClass::hostByName(const char* aHostname, IPAddress& aResult)
  * @param ipaddr
  * @param callback_arg
  */
-void wifi_dns_found_callback(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
+static void wifi_dns_found_callback(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 {
     if(ipaddr) {
         (*reinterpret_cast<IPAddress*>(callback_arg)) = ipaddr->u_addr.ip4.addr;
@@ -276,47 +321,30 @@ void wifi_dns_found_callback(const char *name, const ip_addr_t *ipaddr, void *ca
 }
 
 /**
- * Boot and start WiFi
- * This method get's called on boot if you use any of the WiFi methods.
- * If you do not link to this library, WiFi will not be started.
- * */
-#include "nvs_flash.h"
-
-extern "C" void initWiFi()
+ * Resolve the given hostname to an IP address.
+ * @param aHostname     Name to be resolved
+ * @param aResult       IPAddress structure to store the returned IP address
+ * @return 1 if aIPAddrString was successfully converted to an IP address,
+ *          else error code
+ */
+int WiFiGenericClass::hostByName(const char* aHostname, IPAddress& aResult)
 {
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    nvs_flash_init();
-    tcpip_adapter_init();
-    esp_event_loop_init(WiFiGenericClass::_eventCallback, NULL);
-    esp_wifi_init(&cfg);
-}
+    ip_addr_t addr;
+    aResult = static_cast<uint32_t>(0);
 
-void startWiFi()
-{
-    esp_err_t err;
-
-    err = esp_wifi_start();
-    if (err != ESP_OK) {
-        log_e("esp_wifi_start: %d", err);
-        return;
-    }
-#if CONFIG_AUTOCONNECT_WIFI
-    wifi_mode_t mode = WIFI_MODE_NULL;
-    bool auto_connect = false;
-
-    err = esp_wifi_get_mode(&mode);
-    if (err != ESP_OK) {
-        log_e("esp_wifi_get_mode: %d", err);
-        return;
-    }
-
-    err = esp_wifi_get_auto_connect(&auto_connect);
-    if ((mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) && auto_connect) {
-        err = esp_wifi_connect();
-        if (err != ESP_OK) {
-            log_e("esp_wifi_connect: %d", err);
+    _dns_busy = true;
+    err_t err = dns_gethostbyname(aHostname, &addr, &wifi_dns_found_callback, &aResult);
+    if(err == ERR_OK && addr.u_addr.ip4.addr) {
+        aResult = addr.u_addr.ip4.addr;
+        _dns_busy = false;
+    } else if(err == ERR_INPROGRESS) {
+        while(_dns_busy){
+            delay(1);
         }
+    } else {
+        _dns_busy = false;
+        return 0;
     }
-#endif
+    return 1;
 }
 

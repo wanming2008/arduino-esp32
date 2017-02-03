@@ -102,12 +102,20 @@ extern "C" {
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
+// avr-libc defines _NOP() since 1.6.2
+#ifndef _NOP
+#define _NOP() do { __asm__ volatile ("nop"); } while (0)
+#endif
+
+typedef unsigned int word;
+
 #define bit(b) (1UL << (b))
 #define _BV(b) (1UL << (b))
 
 #define digitalPinToPort(pin)       (((pin)>31)?1:0)
-#define digitalPinToBitMask(pin)    (1UL << (pin))
+#define digitalPinToBitMask(pin)    (1UL << (((pin)>31)?((pin)-31):(pin)))
 #define digitalPinToTimer(pin)      (0)
+#define analogInPinToBit(P)         (P)
 #define portOutputRegister(port)    ((volatile uint32_t*)((port)?GPIO_OUT1_REG:GPIO_OUT_REG))
 #define portInputRegister(port)     ((volatile uint32_t*)((port)?GPIO_IN1_REG:GPIO_IN_REG))
 #define portModeRegister(port)      ((volatile uint32_t*)((port)?GPIO_ENABLE1_REG:GPIO_ENABLE_REG))
@@ -119,7 +127,16 @@ extern "C" {
 
 typedef bool boolean;
 typedef uint8_t byte;
-typedef unsigned int word;
+
+void init(void);
+void initVariant(void);
+void initArduino(void);
+
+void setup(void);
+void loop(void);
+
+unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout);
+unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout);
 
 uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
 void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
@@ -146,6 +163,18 @@ void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val);
 #include "HardwareSerial.h"
 #include "Esp.h"
 
+uint16_t makeWord(uint16_t w);
+uint16_t makeWord(byte h, byte l);
+
+#define word(...) makeWord(__VA_ARGS__)
+
+unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout = 1000000L);
+unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout = 1000000L);
+
+extern "C" bool getLocalTime(struct tm * info, uint32_t ms = 5000);
+extern "C" void configTime(long gmtOffset_sec, int daylightOffset_sec,
+        const char* server1, const char* server2 = nullptr, const char* server3 = nullptr);
+
 // WMath prototypes
 long random(long);
 #endif /* __cplusplus */
@@ -162,7 +191,6 @@ long map(long, long, long, long, long);
 
 #define _min(a,b) ((a)<(b)?(a):(b))
 #define _max(a,b) ((a)>(b)?(a):(b))
-
 #include "pins_arduino.h"
 
 #endif /* _ESP32_CORE_ARDUINO_H_ */
